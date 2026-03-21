@@ -5,6 +5,8 @@ import Lobby from './components/Lobby';
 import DominoesGame from './components/DominoesGame';
 import TicTacToeGame from './components/TicTacToeGame';
 import UnoGame from './components/UnoGame';
+import ChessGame from './components/ChessGame';
+import ParchisGame from './components/ParchisGame';
 
 // Configure Socket globally but connect via component
 const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', { 
@@ -103,6 +105,8 @@ function AppContent() {
       <Route path="/play/dominoes/:roomId" element={<DominoesGame user={user} socket={socket} />} />
       <Route path="/play/tictactoe/:roomId" element={<TicTacToeGame user={user} socket={socket} />} />
       <Route path="/play/uno/:roomId" element={<UnoGame user={user} socket={socket} />} />
+      <Route path="/play/chess/:roomId" element={<ChessGame user={user} socket={socket} />} />
+      <Route path="/play/parchis/:roomId" element={<ParchisGame user={user} socket={socket} />} />
     </Routes>
   );
 }

@@ -8,6 +8,8 @@ const { getUser, updatePoints, getLeaderboard } = require('./database/db');
 const DominoesGame = require('./game/dominoes');
 const TicTacToeGame = require('./game/tictactoe');
 const UnoGame = require('./game/uno');
+const ChessGame = require('./game/chess');
+const ParchisGame = require('./game/parchis');
 
 const app = express();
 app.use(cors());
@@ -65,6 +67,10 @@ io.on('connection', (socket) => {
             rooms[roomId] = { instance: new TicTacToeGame(challengerId, myId), type: 'tictactoe' };
         } else if (gameType === 'uno') {
             rooms[roomId] = { instance: new UnoGame([challengerId, myId]), type: 'uno' };
+        } else if (gameType === 'chess') {
+            rooms[roomId] = { instance: new ChessGame([challengerId, myId]), type: 'chess' };
+        } else if (gameType === 'parchis') {
+            rooms[roomId] = { instance: new ParchisGame([challengerId, myId]), type: 'parchis' };
         } else {
             rooms[roomId] = { instance: new DominoesGame([challengerId, myId]), type: 'dominoes' };
         }
@@ -158,6 +164,33 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('play_chess_move', ({ roomId, sourceSquare, targetSquare, promotion }) => {
+        const room = rooms[roomId];
+        const myId = onlineUsers[socket.id];
+        if (room && room.type === 'chess' && room.instance.playMove(myId, sourceSquare, targetSquare, promotion)) {
+            broadcastGameState(roomId, room);
+            checkGameEnd(roomId, room);
+        }
+    });
+
+    socket.on('roll_parchis_dice', (roomId) => {
+        const room = rooms[roomId];
+        const myId = onlineUsers[socket.id];
+        if (room && room.type === 'parchis' && room.instance.rollDice(myId)) {
+            broadcastGameState(roomId, room);
+            checkGameEnd(roomId, room);
+        }
+    });
+
+    socket.on('move_parchis_token', ({ roomId, tokenId }) => {
+        const room = rooms[roomId];
+        const myId = onlineUsers[socket.id];
+        if (room && room.type === 'parchis' && room.instance.moveToken(myId, tokenId)) {
+            broadcastGameState(roomId, room);
+            checkGameEnd(roomId, room);
+        }
+    });
+
     socket.on('disconnect', () => {
         const userId = onlineUsers[socket.id];
         
@@ -173,6 +206,12 @@ io.on('connection', (socket) => {
                         isPlayer = true;
                         opponents = room.instance.playersList.filter(id => id !== userId);
                     } else if (room.type === 'uno' && room.instance.playersList.includes(userId)) {
+                        isPlayer = true;
+                        opponents = room.instance.playersList.filter(id => id !== userId);
+                    } else if (room.type === 'chess' && room.instance.playersList.includes(userId)) {
+                        isPlayer = true;
+                        opponents = room.instance.playersList.filter(id => id !== userId);
+                    } else if (room.type === 'parchis' && room.instance.playersList.includes(userId)) {
                         isPlayer = true;
                         opponents = room.instance.playersList.filter(id => id !== userId);
                     } else if (room.type === 'tictactoe' && (room.instance.p1 === userId || room.instance.p2 === userId)) {
@@ -241,11 +280,11 @@ function checkGameEnd(roomId, room) {
     if (game.status !== 'playing' && game.winner) {
         const { updatePoints, getUser } = require('./database/db');
         if (game.winner !== 'draw') {
-            if (room.type === 'tictactoe') {
-                const loser = game.winner === game.p1 ? game.p2 : game.p1;
+            if (room.type === 'tictactoe' || room.type === 'chess') {
+                const loser = room.type === 'tictactoe' ? (game.winner === game.p1 ? game.p2 : game.p1) : game.playersList.find(id => id !== game.winner);
                 updatePoints(game.winner, 50, true); 
                 updatePoints(loser, -15, false); 
-            } else if (room.type === 'dominoes' || room.type === 'uno') {
+            } else if (room.type === 'dominoes' || room.type === 'uno' || room.type === 'parchis') {
                 const losers = game.playersList.filter(id => id !== game.winner);
                 updatePoints(game.winner, 50, true); 
                 losers.forEach(loserId => updatePoints(loserId, -15, false));
@@ -255,7 +294,7 @@ function checkGameEnd(roomId, room) {
         broadcastOnlineUsers(); // Push updated leaderboards to lobby
         
         // Push the new user state to the players directly so React updates instantly
-        const players = (room.type === 'dominoes' || room.type === 'uno') ? game.playersList : [game.p1, game.p2];
+        const players = (room.type === 'dominoes' || room.type === 'uno' || room.type === 'chess' || room.type === 'parchis') ? game.playersList : [game.p1, game.p2];
         players.forEach(pid => {
             const sid = userSockets[pid];
             if (sid) io.to(sid).emit('user_updated', getUser(pid));

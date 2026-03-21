@@ -36,7 +36,7 @@ export default function Lobby({ user, setUser, socket }) {
     const challengeUser = (opponentId) => {
         if (!selectedGame) return alert("Selecciona un juego primero");
         socket.emit('challenge', { opponentId, gameType: selectedGame });
-        const gameNames = { dominoes: 'Dominó', tictactoe: 'Tres en Raya', uno: 'UNO!' };
+        const gameNames = { dominoes: 'Dominó', tictactoe: 'Tres en Raya', uno: 'UNO!', chess: 'Ajedrez', parchis: 'Parchís' };
         alert(`¡Desafiaste a ${opponentId} a ${gameNames[selectedGame] || selectedGame}! Esperando respuesta...`);
         setSelectedGame(null); // reset
     };
@@ -97,7 +97,7 @@ export default function Lobby({ user, setUser, socket }) {
                 <div className="glass-panel" style={{ padding: '2rem', background: 'rgba(99, 102, 241, 0.2)', border: '1px solid #6366f1', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'pulse 2s infinite' }}>
                     <div>
                         <h3 style={{ margin: '0 0 0.5rem', color: '#fff', fontSize: '1.5rem' }}>⚔️ ¡Nuevo Desafío!</h3>
-                        <p style={{ margin: 0, color: '#ccc', fontSize: '1.1rem' }}>El jugador <strong>{incomingChallenge.from}</strong> te ha desafiado a jugar a <strong>{incomingChallenge.gameType === 'dominoes' ? 'Dominó' : incomingChallenge.gameType === 'uno' ? 'UNO!' : 'Tres en Raya'}</strong>.</p>
+                        <p style={{ margin: 0, color: '#ccc', fontSize: '1.1rem' }}>El jugador <strong>{incomingChallenge.from}</strong> te ha desafiado a jugar a <strong>{incomingChallenge.gameType === 'dominoes' ? 'Dominó' : incomingChallenge.gameType === 'uno' ? 'UNO!' : incomingChallenge.gameType === 'chess' ? 'Ajedrez' : incomingChallenge.gameType === 'parchis' ? 'Parchís' : 'Tres en Raya'}</strong>.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button className="glass-button" onClick={acceptChallenge} style={{ fontSize: '1.1rem', padding: '12px 24px' }}>Aceptar</button>
@@ -145,6 +145,42 @@ export default function Lobby({ user, setUser, socket }) {
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🃏</div>
                     <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>UNO!</h3>
                     <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>El clásico de cartas (2-4 Jugadores).</p>
+                </div>
+
+                {/* Chess Card */}
+                <div 
+                    onClick={() => setSelectedGame(selectedGame === 'chess' ? null : 'chess')}
+                    className="glass-panel" 
+                    style={{ 
+                        padding: '1.5rem 1rem', 
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        border: selectedGame === 'chess' ? '2px solid #eab308' : '1px solid rgba(255,255,255,0.1)',
+                        transform: selectedGame === 'chess' ? 'scale(1.02)' : 'none',
+                        transition: 'all 0.2s ease',
+                        background: selectedGame === 'chess' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255,255,255,0.05)'
+                    }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>♟️</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Ajedrez</h3>
+                    <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Estrategia pura (2 Jugadores).</p>
+                </div>
+
+                {/* Parchis Card */}
+                <div 
+                    onClick={() => setSelectedGame(selectedGame === 'parchis' ? null : 'parchis')}
+                    className="glass-panel" 
+                    style={{ 
+                        padding: '1.5rem 1rem', 
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        border: selectedGame === 'parchis' ? '2px solid #22c55e' : '1px solid rgba(255,255,255,0.1)',
+                        transform: selectedGame === 'parchis' ? 'scale(1.02)' : 'none',
+                        transition: 'all 0.2s ease',
+                        background: selectedGame === 'parchis' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.05)'
+                    }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎲</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Parchís</h3>
+                    <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Frenesí hasta 4 Jugadores.</p>
                 </div>
 
                 {/* TicTacToe Card */}
