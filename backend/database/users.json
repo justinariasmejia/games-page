@@ -1,0 +1,30 @@
+{
+  "itsokjustin": {
+    "id": "itsokjustin",
+    "username": "Player_itso",
+    "points": 1050,
+    "wins": 1,
+    "losses": 0
+  },
+  "test": {
+    "id": "test",
+    "username": "Player_test",
+    "points": 985,
+    "wins": 0,
+    "losses": 1
+  },
+  "test1": {
+    "id": "test1",
+    "username": "Player_test",
+    "points": 985,
+    "wins": 0,
+    "losses": 1
+  },
+  "test2": {
+    "id": "test2",
+    "username": "Player_test",
+    "points": 1050,
+    "wins": 1,
+    "losses": 0
+  }
+}
