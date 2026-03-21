@@ -61,8 +61,13 @@ function AppContent() {
         navigate(`/play/${gameType || 'dominoes'}/${roomId}`);
       });
 
+      socket.on('user_updated', (updatedUser) => {
+        setUser(updatedUser);
+      });
+
       return () => {
         socket.off('start_game');
+        socket.off('user_updated');
       };
     }
   }, [user, navigate]);

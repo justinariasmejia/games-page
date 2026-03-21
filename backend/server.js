@@ -153,10 +153,14 @@ io.on('connection', (socket) => {
                         room.instance.status = 'finished';
                         room.instance.winner = opponents[0]; // the other guy wins!
                         const { updatePoints, getUser } = require('./database/db');
-                        updatePoints(room.instance.winner, 50);
-                        updatePoints(userId, -20);
+                        updatePoints(room.instance.winner, 50, true);
+                        updatePoints(userId, -20, false);
                         broadcastGameState(roomId, room);
                         io.to(roomId).emit('chat_message', { system: true, text: `El oponente se desconectó. ¡Victoria automática para ${getUser(opponents[0])?.username || 'el jugador restante'}!` });
+                        
+                        // Hydrate React instantly for the winner
+                        const s_winner = userSockets[room.instance.winner];
+                        if (s_winner) io.to(s_winner).emit('user_updated', getUser(room.instance.winner));
                     }
                 }
             }
@@ -203,12 +207,28 @@ function broadcastGameState(roomId, room) {
 function checkGameEnd(roomId, room) {
     const game = room.instance;
     if (game.status !== 'playing' && game.winner) {
+        const { updatePoints, getUser } = require('./database/db');
         if (game.winner !== 'draw') {
-            const loser = game.winner === game.p1 ? game.p2 : game.p1;
-            // TicTacToe gives less points to keep Dominoes as main game, or same points. Let's do same points.
-            updatePoints(game.winner, 50, true); 
-            updatePoints(loser, -15, false); 
+            if (room.type === 'tictactoe') {
+                const loser = game.winner === game.p1 ? game.p2 : game.p1;
+                updatePoints(game.winner, 50, true); 
+                updatePoints(loser, -15, false); 
+            } else if (room.type === 'dominoes') {
+                const losers = game.playersList.filter(id => id !== game.winner);
+                updatePoints(game.winner, 50, true); 
+                losers.forEach(loserId => updatePoints(loserId, -15, false));
+            }
         }
+        
+        broadcastOnlineUsers(); // Push updated leaderboards to lobby
+        
+        // Push the new user state to the players directly so React updates instantly
+        const players = room.type === 'dominoes' ? game.playersList : [game.p1, game.p2];
+        players.forEach(pid => {
+            const sid = userSockets[pid];
+            if (sid) io.to(sid).emit('user_updated', getUser(pid));
+        });
+
         // Emit final state and game over event
         io.to(roomId).emit('game_over', { winner: game.winner });
         delete rooms[roomId];
