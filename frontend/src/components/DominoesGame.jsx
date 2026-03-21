@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut } from 'lucide-react';
+import { ChevronLeft, LogOut, User } from 'lucide-react';
 import DominoTile from './DominoTile';
 
 export default function DominoesGame({ user, socket }) {
@@ -9,13 +9,21 @@ export default function DominoesGame({ user, socket }) {
     const [gameState, setGameState] = useState(null);
     const [selectedTileIndex, setSelectedTileIndex] = useState(null);
     const [gameOverMsg, setGameOverMsg] = useState('');
+    const boardRef = useRef(null);
 
     useEffect(() => {
+        if (!user) return; // need to wait for user to load
         socket.emit('join_room', roomId);
 
         socket.on('game_state', (state) => {
             setGameState(state);
             setSelectedTileIndex(null);
+            // Also scroll perfectly to the center when board updates
+            if (boardRef.current) {
+                setTimeout(() => {
+                    boardRef.current.scrollLeft = (boardRef.current.scrollWidth - boardRef.current.clientWidth) / 2;
+                }, 50);
+            }
         });
 
         socket.on('game_over', ({ winner }) => {
@@ -28,7 +36,7 @@ export default function DominoesGame({ user, socket }) {
             socket.off('game_state');
             socket.off('game_over');
         };
-    }, [roomId, socket, user.id]);
+    }, [roomId, socket, user]); // Added user to dependencies
 
     if (!gameState) return <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>Loading Match Data...</div>;
 
@@ -40,7 +48,7 @@ export default function DominoesGame({ user, socket }) {
         const ends = getPlayableEnds();
         
         let validLeft = tile[0] === ends.left || tile[1] === ends.left || ends.left === 'any';
-        let validRight = tile[0] === ends.right || tile[1] === ends.right || ends.right === 'any';
+        let validRight = tile[0] === ends.right || tile[1] === ends.right || tile[0] === ends.left || tile[1] === ends.left || ends.right === 'any'; // Corrected logic for right side
 
         if (validLeft && validRight && ends.left !== 'any') {
             setSelectedTileIndex(index);
@@ -83,17 +91,34 @@ export default function DominoesGame({ user, socket }) {
                 <button className="glass-button-secondary" onClick={() => navigate('/')} style={{ padding: '0.5rem', display: 'flex', alignItems: 'center' }}>
                     <ChevronLeft size={20} /> Salir
                 </button>
-                <div style={{ display: 'flex', gap: '2rem' }}>
-                    {gameState.opponents.map((opp, idx) => (
-                        <div key={idx} style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>Jugador {opp.id.substring(0,4)}</div>
-                            <h3 style={{ margin: 0, color: '#fff' }}><span style={{ color: '#a855f7' }}>{opp.tileCount}</span> fichas</h3>
+                {/* Opponents Hud */}
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '1rem' }}>
+                    {gameState.opponents.map(opp => (
+                        <div key={opp.id} className="glass-panel" style={{ flex: 1, textAlign: 'center', position: 'relative', overflow: 'hidden', padding: '1rem', border: opp.id === gameState.turn ? `2px solid ${opp.profileConfig?.color || '#4ade80'}` : '2px solid transparent' }}>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                    {opp.avatarUrl ? <img src={opp.avatarUrl} alt="avatar" style={{width: '100%', height: '100%'}}/> : <User size={15} color="white" />}
+                                </div>
+                                <span style={{ fontSize: '1rem', fontWeight: 'bold', color: opp.profileConfig?.color || '#fff' }}>
+                                    {opp.username || `Player_${opp.id.substring(0,4)}`}
+                                </span>
+                            </div>
+                            
+                            <div style={{ color: '#a855f7', fontWeight: 'bold' }}>
+                                {opp.tileCount} fichas
+                            </div>
+                            {opp.id === gameState.turn && (
+                                <div style={{ position: 'absolute', top: 0, right: 0, background: '#4ade80', color: '#000', fontSize: '0.7rem', padding: '0.2rem 0.5rem', fontWeight: 'bold', borderBottomLeftRadius: '8px' }}>
+                                    Jugando
+                                </div>
+                            )}
                         </div>
                     ))}
-                    <div style={{ textAlign: 'center', borderLeft: '1px solid #444', paddingLeft: '2rem' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#ccc' }}>En pozo:</div>
-                        <h3 style={{ margin: 0, color: '#fff' }}>{gameState.boneyardCount} restantes</h3>
-                    </div>
+                </div>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid #444', paddingLeft: '2rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#ccc' }}>En pozo:</div>
+                    <h3 style={{ margin: 0, color: '#fff' }}>{gameState.boneyardCount} restantes</h3>
                 </div>
                 <div style={{ fontWeight: 'bold', color: isMyTurn ? '#4ade80' : '#f87171', fontSize: '1.2rem' }}>
                     {isMyTurn ? "¡Tu Turno!" : gameState.turn ? `Turno de ${gameState.turn.substring(0,4)}` : ''}

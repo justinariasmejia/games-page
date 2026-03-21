@@ -79,7 +79,18 @@ io.on('connection', (socket) => {
         const room = rooms[roomId];
         if (room) {
             const myId = onlineUsers[socket.id];
-            socket.emit('game_state', room.instance.getState(myId));
+            const state = room.instance.getState(myId);
+            
+            // Hydrate opponents with usernames and avatars
+            const { getUser } = require('./database/db');
+            if (state.opponents) {
+                state.opponents = state.opponents.map(opp => {
+                    const u = getUser(opp.id);
+                    return { ...opp, username: u?.username, avatarUrl: u?.avatarUrl, profileConfig: u?.profileConfig };
+                });
+            }
+            
+            socket.emit('game_state', state);
         }
     });
 
@@ -120,6 +131,37 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         const userId = onlineUsers[socket.id];
+        
+        // Handle Auto-Surrender if disconnecting during an active game
+        if (userId) {
+            for (const [roomId, room] of Object.entries(rooms)) {
+                if (room.instance.status === 'playing') {
+                    // Check if this user is in the game
+                    let isPlayer = false;
+                    let opponents = [];
+                    
+                    if (room.type === 'dominoes' && room.instance.playersList.includes(userId)) {
+                        isPlayer = true;
+                        opponents = room.instance.playersList.filter(id => id !== userId);
+                    } else if (room.type === 'tictactoe' && (room.instance.p1 === userId || room.instance.p2 === userId)) {
+                        isPlayer = true;
+                        opponents = [room.instance.p1, room.instance.p2].filter(id => id !== userId);
+                    }
+
+                    // If it's a 1v1 match and they disconnect, they surrender!
+                    if (isPlayer && opponents.length === 1) {
+                        room.instance.status = 'finished';
+                        room.instance.winner = opponents[0]; // the other guy wins!
+                        const { updatePoints, getUser } = require('./database/db');
+                        updatePoints(room.instance.winner, 50);
+                        updatePoints(userId, -20);
+                        broadcastGameState(roomId, room);
+                        io.to(roomId).emit('chat_message', { system: true, text: `El oponente se desconectó. ¡Victoria automática para ${getUser(opponents[0])?.username || 'el jugador restante'}!` });
+                    }
+                }
+            }
+        }
+
         delete onlineUsers[socket.id];
         delete userSockets[userId];
         broadcastOnlineUsers();
@@ -133,15 +175,31 @@ function broadcastOnlineUsers() {
 }
 
 function broadcastGameState(roomId, room) {
+    const { getUser } = require('./database/db');
     const socketsInRoom = io.sockets.adapter.rooms.get(roomId);
     if (socketsInRoom) {
-        for (const socketId of socketsInRoom) {
-            const userId = onlineUsers[socketId];
-            io.to(socketId).emit('game_state', room.instance.getState(userId));
+        for (const sid of socketsInRoom) {
+            const playerId = onlineUsers[sid];
+            if (playerId) {
+                const state = room.instance.getState(playerId);
+                
+                // Hydrate opponents with usernames and avatars
+                if (state.opponents) {
+                    state.opponents = state.opponents.map(opp => {
+                        const u = getUser(opp.id);
+                        return { ...opp, username: u?.username, avatarUrl: u?.avatarUrl, profileConfig: u?.profileConfig };
+                    });
+                } else if (state.opponentId) {
+                    // For TicTacToe single opponent
+                    const u = getUser(state.opponentId);
+                    state.opponentProfile = { username: u?.username, avatarUrl: u?.avatarUrl, profileConfig: u?.profileConfig };
+                }
+
+                io.to(sid).emit('game_state', state);
+            }
         }
     }
 }
-
 function checkGameEnd(roomId, room) {
     const game = room.instance;
     if (game.status !== 'playing' && game.winner) {
