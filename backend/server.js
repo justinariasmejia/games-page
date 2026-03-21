@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
         if (gameType === 'tictactoe') {
             rooms[roomId] = { instance: new TicTacToeGame(challengerId, myId), type: 'tictactoe' };
         } else {
-            rooms[roomId] = { instance: new DominoesGame(challengerId, myId), type: 'dominoes' };
+            rooms[roomId] = { instance: new DominoesGame([challengerId, myId]), type: 'dominoes' };
         }
 
         // Tell both to join the room

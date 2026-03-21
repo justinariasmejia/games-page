@@ -5,7 +5,12 @@
     "avatarUrl": null,
     "points": 985,
     "wins": 0,
-    "losses": 1
+    "losses": 1,
+    "profileConfig": {
+      "color": "#6366f1",
+      "bgUrl": "",
+      "musicUrl": ""
+    }
   },
   "852601581790822411": {
     "id": "852601581790822411",
@@ -15,7 +20,7 @@
     "wins": 1,
     "losses": 0,
     "profileConfig": {
-      "color": "#ffffff",
+      "color": "#640bea",
       "bgUrl": "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcG5zMnVmeHAydzkzdjRzcHhwd290cGluZTlyYWQyYml4Y3FmMjY1NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/YqhIK6Gbor6CLeloBq/giphy.gif",
       "musicUrl": "https://www.youtube.com/watch?v=4w5BZ4T2Tko"
     }
