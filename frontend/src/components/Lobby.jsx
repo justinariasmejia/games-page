@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Users, User, Gamepad2, XCircle } from 'lucide-react';
+import { Trophy, Users, User, Gamepad2 } from 'lucide-react';
+import ProfileModal from './ProfileModal';
 
 export default function Lobby({ user, socket }) {
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [incomingChallenge, setIncomingChallenge] = useState(null);
     const [selectedGame, setSelectedGame] = useState(null); // 'dominoes' or 'tictactoe'
+    const [viewingProfile, setViewingProfile] = useState(null); // the user object currently being viewed in modal
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/leaderboard`, {
@@ -16,8 +18,9 @@ export default function Lobby({ user, socket }) {
             .then(res => res.json())
             .then(data => setLeaderboard(data));
 
-        socket.on('online_users', (users) => {
-            setOnlineUsers(users.filter(id => id !== user.id));
+        socket.on('online_users', (usersObjArray) => {
+            // Filter myself out of the online list. Assuming usersObjArray is [{id, username, avatarUrl...}, ...]
+            setOnlineUsers(usersObjArray.filter(u => u.id !== user.id));
         });
 
         socket.on('challenge_received', ({ from, gameType }) => {
@@ -44,10 +47,35 @@ export default function Lobby({ user, socket }) {
         }
     };
 
+    const handleSaveProfile = (config) => {
+        socket.emit('update_profile', config);
+        // Optimistically update my local object so the UI reflects it immediately
+        user.profileConfig = config; 
+    };
+
     return (
         <div className="container">
+            {viewingProfile && (
+                <ProfileModal 
+                    userProfile={viewingProfile} 
+                    currentUser={user} 
+                    onClose={() => setViewingProfile(null)}
+                    onSave={handleSaveProfile}
+                    onChallenge={(id) => {
+                        if (!selectedGame) alert("¡Debes seleccionar un juego primero en el menú principal!");
+                        else challengeUser(id);
+                    }}
+                />
+            )}
+
             {/* Header / Profile */}
-            <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div 
+                className="glass-panel" 
+                style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', cursor: 'pointer', transition: 'all 0.2s', border: `1px solid ${user.profileConfig?.color || 'transparent'}` }}
+                onClick={() => setViewingProfile(user)}
+                onMouseOver={e => e.currentTarget.style.transform = 'scale(1.01)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                         {user.avatarUrl ? <img src={user.avatarUrl} alt="avatar" style={{width: '100%', height: '100%'}}/> : <User size={30} color="white" />}
@@ -128,16 +156,21 @@ export default function Lobby({ user, socket }) {
                         {!selectedGame && <div style={{ color: '#a855f7', fontStyle: 'italic', marginBottom: '1rem' }}>↑ Selecciona un juego primero para ver a quién puedes retar.</div>}
                         
                         {onlineUsers.length === 0 ? <p style={{ color: '#aaa' }}>No hay otros jugadores en línea.</p> : null}
-                        {onlineUsers.map(id => (
-                            <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
-                                <span style={{ fontWeight: 'bold' }}>Player_{id.substring(0,4)}</span>
+                        {onlineUsers.map(onlineUser => (
+                            <div key={onlineUser.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', cursor: 'pointer', borderLeft: `4px solid ${onlineUser.profileConfig?.color || '#a855f7'}` }} onClick={() => setViewingProfile(onlineUser)}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                        {onlineUser.avatarUrl ? <img src={onlineUser.avatarUrl} alt="avatar" style={{width: '100%', height: '100%'}}/> : <User size={20} color="white" />}
+                                    </div>
+                                    <span style={{ fontWeight: 'bold', color: onlineUser.profileConfig?.color || '#fff' }}>{onlineUser.username || `Player_${onlineUser.id.substring(0,4)}`}</span>
+                                </div>
                                 <button 
                                     className="glass-button" 
                                     disabled={!selectedGame}
                                     style={{ opacity: selectedGame ? 1 : 0.5, cursor: selectedGame ? 'pointer' : 'not-allowed' }}
-                                    onClick={() => challengeUser(id)}
+                                    onClick={(e) => { e.stopPropagation(); challengeUser(onlineUser.id); }}
                                 >
-                                    ¡Desafiar!
+                                    ¡Jugar!
                                 </button>
                             </div>
                         ))}
@@ -151,10 +184,13 @@ export default function Lobby({ user, socket }) {
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
                         {leaderboard.map((lbUser, idx) => (
-                            <div key={lbUser.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.8rem 1rem', background: idx === 0 ? 'rgba(234, 179, 8, 0.1)' : 'rgba(0,0,0,0.2)', borderRadius: '8px', border: idx === 0 ? '1px solid rgba(234, 179, 8, 0.3)' : 'none' }}>
-                                <div>
-                                    <span style={{ color: idx === 0 ? '#eab308' : '#aaa', marginRight: '1rem', fontWeight: 'bold' }}>#{idx + 1}</span>
-                                    <strong>{lbUser.username}</strong>
+                            <div key={lbUser.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem', background: idx === 0 ? 'rgba(234, 179, 8, 0.1)' : 'rgba(0,0,0,0.2)', borderRadius: '8px', border: idx === 0 ? '1px solid rgba(234, 179, 8, 0.3)' : 'none', cursor: 'pointer', borderLeft: `4px solid ${lbUser.profileConfig?.color || 'transparent'}` }} onClick={() => setViewingProfile(lbUser)}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <span style={{ color: idx === 0 ? '#eab308' : '#aaa', fontWeight: 'bold', width: '20px' }}>#{idx + 1}</span>
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                        {lbUser.avatarUrl ? <img src={lbUser.avatarUrl} alt="avatar" style={{width: '100%', height: '100%'}}/> : <User size={15} color="white" />}
+                                    </div>
+                                    <strong style={{ color: lbUser.profileConfig?.color || '#fff' }}>{lbUser.username}</strong>
                                 </div>
                                 <span style={{ color: '#a855f7', fontWeight: 'bold' }}>{lbUser.points} pts</span>
                             </div>

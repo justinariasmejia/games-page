@@ -1,28 +1,16 @@
 {
-  "itsokjustin": {
-    "id": "itsokjustin",
-    "username": "Player_itso",
-    "points": 1050,
-    "wins": 1,
-    "losses": 0
-  },
-  "test": {
-    "id": "test",
-    "username": "Player_test",
+  "709545185322860636": {
+    "id": "709545185322860636",
+    "username": "gutest2",
+    "avatarUrl": null,
     "points": 985,
     "wins": 0,
     "losses": 1
   },
-  "test1": {
-    "id": "test1",
-    "username": "Player_test",
-    "points": 985,
-    "wins": 0,
-    "losses": 1
-  },
-  "test2": {
-    "id": "test2",
-    "username": "Player_test",
+  "852601581790822411": {
+    "id": "852601581790822411",
+    "username": "itsokjustin",
+    "avatarUrl": "https://cdn.discordapp.com/avatars/852601581790822411/6ecb7e15cf86e9fbebf56a0edd539d29.png",
     "points": 1050,
     "wins": 1,
     "losses": 0

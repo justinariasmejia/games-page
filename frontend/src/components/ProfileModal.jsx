@@ -1,0 +1,113 @@
+import React, { useState, useEffect } from 'react';
+import { User, X, Gamepad2, Settings } from 'lucide-react';
+
+export default function ProfileModal({ userProfile, currentUser, onClose, onSave, onChallenge }) {
+    const [editMode, setEditMode] = useState(false);
+    const [color, setColor] = useState(userProfile?.profileConfig?.color || '#6366f1');
+    const [bgUrl, setBgUrl] = useState(userProfile?.profileConfig?.bgUrl || '');
+    const [musicUrl, setMusicUrl] = useState(userProfile?.profileConfig?.musicUrl || '');
+
+    const isMe = currentUser.id === userProfile.id;
+
+    const handleSave = () => {
+        onSave({ color, bgUrl, musicUrl });
+        setEditMode(false);
+    };
+
+    return (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            {/* Backdrop */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }} onClick={onClose} />
+            
+            {/* Auto-playing Music when viewing someone else's profile (or own if saved) */}
+            {userProfile?.profileConfig?.musicUrl && !editMode && (
+                <audio autoPlay loop volume="0.3" src={userProfile.profileConfig.musicUrl} />
+            )}
+
+            {/* Modal Card */}
+            <div className="glass-panel" style={{ 
+                position: 'relative', 
+                width: '90%', 
+                maxWidth: '450px', 
+                overflow: 'hidden', 
+                padding: 0,
+                border: `2px solid ${userProfile?.profileConfig?.color || '#6366f1'}`,
+                boxShadow: `0 0 30px ${userProfile?.profileConfig?.color || '#6366f1'}44`
+            }}>
+                
+                {/* Background Image / Banner */}
+                <div style={{ 
+                    height: '180px', 
+                    width: '100%', 
+                    background: userProfile?.profileConfig?.bgUrl ? `url(${userProfile.profileConfig.bgUrl}) center/cover` : `linear-gradient(135deg, ${userProfile?.profileConfig?.color || '#6366f1'}88, transparent)`,
+                    borderBottom: '1px solid rgba(255,255,255,0.1)' 
+                }}>
+                    <button onClick={onClose} style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <X size={18} />
+                    </button>
+                    {isMe && !editMode && (
+                        <button onClick={() => setEditMode(true)} style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', borderRadius: '8px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                            <Settings size={14} /> Editar Perfil
+                        </button>
+                    )}
+                </div>
+
+                {/* Avatar Overlapping Banner */}
+                <div style={{ position: 'relative', marginTop: '-50px', marginLeft: '2rem', width: '100px', height: '100px', borderRadius: '50%', border: '4px solid #1a1a2e', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {userProfile.avatarUrl ? <img src={userProfile.avatarUrl} alt="avatar" style={{width: '100%', height: '100%'}}/> : <User size={50} color="white" />}
+                </div>
+
+                {/* Body Content */}
+                <div style={{ padding: '1rem 2rem 2rem 2rem' }}>
+                    {!editMode ? (
+                        <>
+                            <h2 style={{ margin: '0 0 0.2rem 0', fontSize: '1.8rem', color: userProfile?.profileConfig?.color || '#fff' }}>{userProfile.username || 'Desconocido'}</h2>
+                            <p style={{ margin: '0 0 1.5rem 0', color: '#a855f7', fontWeight: 'bold' }}>🪙 {userProfile.points} pts globales</p>
+                            
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                                <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.8rem', color: '#aaa', textTransform: 'uppercase' }}>Victorias</div>
+                                    <div style={{ fontSize: '1.5rem', color: '#4ade80', fontWeight: 'bold' }}>{userProfile.wins}</div>
+                                </div>
+                                <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.8rem', color: '#aaa', textTransform: 'uppercase' }}>Derrotas</div>
+                                    <div style={{ fontSize: '1.5rem', color: '#f87171', fontWeight: 'bold' }}>{userProfile.losses}</div>
+                                </div>
+                            </div>
+
+                            {!isMe && (
+                                <button className="glass-button" onClick={() => { onClose(); onChallenge(userProfile.id); }} style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', background: `linear-gradient(90deg, ${userProfile?.profileConfig?.color || '#6366f1'}, #a855f7)` }}>
+                                    <Gamepad2 size={24} /> Desafiar a jugar
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <h3 style={{ margin: '0 0 1rem 0' }}>Personalizar Tarjeta</h3>
+                            
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Color Favorito (Hex)</label>
+                                <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: '100%', height: '40px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px' }} />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Fondo de Banner (URL Imagen/GIF)</label>
+                                <input type="text" className="glass-input" value={bgUrl} onChange={e => setBgUrl(e.target.value)} placeholder="https://ejemplo.com/fondo.gif" />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Música de Perfil (URL MP3)</label>
+                                <input type="text" className="glass-input" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} placeholder="https://ejemplo.com/cancion.mp3" />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <button className="glass-button" onClick={handleSave} style={{ flex: 1, background: '#4ade80' }}>Guardar</button>
+                                <button className="glass-button-secondary" onClick={() => { setEditMode(false); setColor(userProfile?.profileConfig?.color || '#6366f1'); setBgUrl(userProfile?.profileConfig?.bgUrl || ''); setMusicUrl(userProfile?.profileConfig?.musicUrl || ''); }} style={{ flex: 1 }}>Cancelar</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

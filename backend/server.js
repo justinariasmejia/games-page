@@ -36,7 +36,16 @@ io.on('connection', (socket) => {
     socket.on('login', (userId) => {
         onlineUsers[socket.id] = userId;
         userSockets[userId] = socket.id;
-        io.emit('online_users', Object.keys(userSockets)); // Broadcast who's online
+        broadcastOnlineUsers();
+    });
+
+    socket.on('update_profile', (config) => {
+        const myId = onlineUsers[socket.id];
+        if (myId) {
+            const { updateProfileConfig } = require('./database/db');
+            updateProfileConfig(myId, config);
+            broadcastOnlineUsers(); // Refresh names/colors for everyone
+        }
     });
 
     socket.on('challenge', ({ opponentId, gameType = 'dominoes' }) => {
@@ -113,10 +122,15 @@ io.on('connection', (socket) => {
         const userId = onlineUsers[socket.id];
         delete onlineUsers[socket.id];
         delete userSockets[userId];
-        io.emit('online_users', Object.keys(userSockets));
+        broadcastOnlineUsers();
         console.log('User disconnected:', socket.id);
     });
 });
+
+function broadcastOnlineUsers() {
+    const userList = Object.keys(userSockets).map(id => getUser(id)).filter(u => u != null);
+    io.emit('online_users', userList);
+}
 
 function broadcastGameState(roomId, room) {
     const socketsInRoom = io.sockets.adapter.rooms.get(roomId);

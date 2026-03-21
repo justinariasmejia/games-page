@@ -20,10 +20,16 @@ function saveUsers(users) {
 function getOrCreateDiscordUser(id, username, avatarUrl) {
     const users = getUsers();
     if (!users[id]) {
-        users[id] = { id, username, avatarUrl, points: 1000, wins: 0, losses: 0 };
+        users[id] = { 
+            id, username, avatarUrl, points: 1000, wins: 0, losses: 0,
+            profileConfig: { color: '#6366f1', bgUrl: '', musicUrl: '' }
+        };
     } else {
         users[id].username = username;
         users[id].avatarUrl = avatarUrl;
+        if (!users[id].profileConfig) {
+            users[id].profileConfig = { color: '#6366f1', bgUrl: '', musicUrl: '' };
+        }
     }
     saveUsers(users);
     return users[id];
@@ -49,4 +55,14 @@ function getLeaderboard() {
     return Object.values(users).sort((a, b) => b.points - a.points).slice(0, 10);
 }
 
-module.exports = { getUser, getOrCreateDiscordUser, updatePoints, getLeaderboard };
+function updateProfileConfig(id, config) {
+    const users = getUsers();
+    if (users[id]) {
+        users[id].profileConfig = { ...users[id].profileConfig, ...config };
+        saveUsers(users);
+        return users[id];
+    }
+    return null;
+}
+
+module.exports = { getUser, getOrCreateDiscordUser, updatePoints, getLeaderboard, updateProfileConfig };
