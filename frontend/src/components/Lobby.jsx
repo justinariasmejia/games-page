@@ -8,7 +8,11 @@ export default function Lobby({ user, socket }) {
     const [selectedGame, setSelectedGame] = useState(null); // 'dominoes' or 'tictactoe'
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/leaderboard`)
+        fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/leaderboard`, {
+            headers: {
+                "ngrok-skip-browser-warning": "true"
+            }
+        })
             .then(res => res.json())
             .then(data => setLeaderboard(data));
 

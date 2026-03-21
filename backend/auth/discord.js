@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch'); // Needs to be installed if < Node 18, but Node 18+ has native fetch. Let's assume native fetch.
 const { getUser, getLeaderboard } = require('../database/db');
 
 // In production, these should be from process.env

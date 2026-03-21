@@ -6,7 +6,12 @@ import DominoesGame from './components/DominoesGame';
 import TicTacToeGame from './components/TicTacToeGame';
 
 // Configure Socket globally but connect via component
-const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', { autoConnect: false });
+const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', { 
+    autoConnect: false,
+    extraHeaders: {
+        "ngrok-skip-browser-warning": "true"
+    }
+});
 
 function AppContent() {
   const [user, setUser] = useState(null);
@@ -31,7 +36,11 @@ function AppContent() {
 
   const fetchProfile = async (token) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/auth/me?token=${token}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/auth/me?token=${token}`, {
+        headers: {
+            "ngrok-skip-browser-warning": "true"
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setUser(data);
