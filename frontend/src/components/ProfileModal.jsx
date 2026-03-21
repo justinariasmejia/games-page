@@ -14,16 +14,21 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
         setEditMode(false);
     };
 
+    // YouTube detector
+    const getYoutubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const ytId = getYoutubeId(userProfile?.profileConfig?.musicUrl);
+
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
             {/* Backdrop */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }} onClick={onClose} />
-            
-            {/* Auto-playing Music when viewing someone else's profile (or own if saved) */}
-            {userProfile?.profileConfig?.musicUrl && !editMode && (
-                <audio autoPlay loop volume="0.3" src={userProfile.profileConfig.musicUrl} />
-            )}
-
+           
             {/* Modal Card */}
             <div className="glass-panel" style={{ 
                 position: 'relative', 
@@ -64,7 +69,7 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
                             <h2 style={{ margin: '0 0 0.2rem 0', fontSize: '1.8rem', color: userProfile?.profileConfig?.color || '#fff' }}>{userProfile.username || 'Desconocido'}</h2>
                             <p style={{ margin: '0 0 1.5rem 0', color: '#a855f7', fontWeight: 'bold' }}>🪙 {userProfile.points} pts globales</p>
                             
-                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
                                     <div style={{ fontSize: '0.8rem', color: '#aaa', textTransform: 'uppercase' }}>Victorias</div>
                                     <div style={{ fontSize: '1.5rem', color: '#4ade80', fontWeight: 'bold' }}>{userProfile.wins}</div>
@@ -74,6 +79,17 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
                                     <div style={{ fontSize: '1.5rem', color: '#f87171', fontWeight: 'bold' }}>{userProfile.losses}</div>
                                 </div>
                             </div>
+
+                            {/* Music Player */}
+                            {userProfile?.profileConfig?.musicUrl && !editMode && (
+                                <div style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+                                    {ytId ? (
+                                        <iframe width="100%" height="80" src={`https://www.youtube.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ borderRadius: '4px' }}></iframe>
+                                    ) : (
+                                        <audio autoPlay loop controls src={userProfile.profileConfig.musicUrl} style={{ width: '100%', height: '40px' }} />
+                                    )}
+                                </div>
+                            )}
 
                             {!isMe && (
                                 <button className="glass-button" onClick={() => { onClose(); onChallenge(userProfile.id); }} style={{ width: '100%', padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', background: `linear-gradient(90deg, ${userProfile?.profileConfig?.color || '#6366f1'}, #a855f7)` }}>
@@ -96,8 +112,9 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Música de Perfil (URL MP3)</label>
-                                <input type="text" className="glass-input" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} placeholder="https://ejemplo.com/cancion.mp3" />
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>Música de Perfil (Audio directo o YouTube)</label>
+                                <input type="text" className="glass-input" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} placeholder="Ej: Link a YouTube o a un .mp3" />
+                                <span style={{ fontSize: '0.7rem', color: '#888', marginTop: '4px', display: 'block' }}>Soporta enlaces de YouTube o archivos directos de audio.</span>
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>

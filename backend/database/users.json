@@ -13,6 +13,11 @@
     "avatarUrl": "https://cdn.discordapp.com/avatars/852601581790822411/6ecb7e15cf86e9fbebf56a0edd539d29.png",
     "points": 1050,
     "wins": 1,
-    "losses": 0
+    "losses": 0,
+    "profileConfig": {
+      "color": "#ffffff",
+      "bgUrl": "",
+      "musicUrl": ""
+    }
   }
 }
