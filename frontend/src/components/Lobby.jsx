@@ -36,7 +36,8 @@ export default function Lobby({ user, setUser, socket }) {
     const challengeUser = (opponentId) => {
         if (!selectedGame) return alert("Selecciona un juego primero");
         socket.emit('challenge', { opponentId, gameType: selectedGame });
-        alert(`¡Desafiaste a ${opponentId} a ${selectedGame === 'dominoes' ? 'Dominó' : 'Tres en Raya'}! Esperando respuesta...`);
+        const gameNames = { dominoes: 'Dominó', tictactoe: 'Tres en Raya', uno: 'UNO!' };
+        alert(`¡Desafiaste a ${opponentId} a ${gameNames[selectedGame] || selectedGame}! Esperando respuesta...`);
         setSelectedGame(null); // reset
     };
 
@@ -96,7 +97,7 @@ export default function Lobby({ user, setUser, socket }) {
                 <div className="glass-panel" style={{ padding: '2rem', background: 'rgba(99, 102, 241, 0.2)', border: '1px solid #6366f1', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'pulse 2s infinite' }}>
                     <div>
                         <h3 style={{ margin: '0 0 0.5rem', color: '#fff', fontSize: '1.5rem' }}>⚔️ ¡Nuevo Desafío!</h3>
-                        <p style={{ margin: 0, color: '#ccc', fontSize: '1.1rem' }}>El jugador <strong>{incomingChallenge.from}</strong> te ha desafiado a jugar a <strong>{incomingChallenge.gameType === 'dominoes' ? 'Dominó' : 'Tres en Raya'}</strong>.</p>
+                        <p style={{ margin: 0, color: '#ccc', fontSize: '1.1rem' }}>El jugador <strong>{incomingChallenge.from}</strong> te ha desafiado a jugar a <strong>{incomingChallenge.gameType === 'dominoes' ? 'Dominó' : incomingChallenge.gameType === 'uno' ? 'UNO!' : 'Tres en Raya'}</strong>.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button className="glass-button" onClick={acceptChallenge} style={{ fontSize: '1.1rem', padding: '12px 24px' }}>Aceptar</button>
@@ -128,6 +129,24 @@ export default function Lobby({ user, setUser, socket }) {
                     <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Hasta 4 Jugadores.</p>
                 </div>
 
+                {/* UNO Card */}
+                <div 
+                    onClick={() => setSelectedGame(selectedGame === 'uno' ? null : 'uno')}
+                    className="glass-panel" 
+                    style={{ 
+                        padding: '1.5rem 1rem', 
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        border: selectedGame === 'uno' ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                        transform: selectedGame === 'uno' ? 'scale(1.02)' : 'none',
+                        transition: 'all 0.2s ease',
+                        background: selectedGame === 'uno' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)'
+                    }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🃏</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>UNO!</h3>
+                    <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>El clásico de cartas (2-4 Jugadores).</p>
+                </div>
+
                 {/* TicTacToe Card */}
                 <div 
                     onClick={() => setSelectedGame(selectedGame === 'tictactoe' ? null : 'tictactoe')}
@@ -145,7 +164,6 @@ export default function Lobby({ user, setUser, socket }) {
                     <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Tres en Raya</h3>
                     <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Rápido y táctico.</p>
                 </div>
-            </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>

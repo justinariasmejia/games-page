@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import Lobby from './components/Lobby';
 import DominoesGame from './components/DominoesGame';
 import TicTacToeGame from './components/TicTacToeGame';
+import UnoGame from './components/UnoGame';
 
 // Configure Socket globally but connect via component
 const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', { 
@@ -101,6 +102,7 @@ function AppContent() {
       <Route path="/" element={<div className="app-container"><Lobby user={user} setUser={setUser} socket={socket} /></div>} />
       <Route path="/play/dominoes/:roomId" element={<DominoesGame user={user} socket={socket} />} />
       <Route path="/play/tictactoe/:roomId" element={<TicTacToeGame user={user} socket={socket} />} />
+      <Route path="/play/uno/:roomId" element={<UnoGame user={user} socket={socket} />} />
     </Routes>
   );
 }
