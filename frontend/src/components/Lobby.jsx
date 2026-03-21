@@ -109,13 +109,13 @@ export default function Lobby({ user, setUser, socket }) {
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                 <Gamepad2 size={24} color="#a855f7" /> Selecciona un Juego
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                 {/* Dominoes Card */}
                 <div 
                     onClick={() => setSelectedGame(selectedGame === 'dominoes' ? null : 'dominoes')}
                     className="glass-panel" 
                     style={{ 
-                        padding: '2rem', 
+                        padding: '1.5rem 1rem', 
                         cursor: 'pointer',
                         textAlign: 'center',
                         border: selectedGame === 'dominoes' ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
@@ -123,9 +123,9 @@ export default function Lobby({ user, setUser, socket }) {
                         transition: 'all 0.2s ease',
                         background: selectedGame === 'dominoes' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255,255,255,0.05)'
                     }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🁣</div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.4rem' }}>Dominó (¡Hasta 4 Jugadores!)</h3>
-                    <p style={{ color: '#aaa', margin: 0 }}>El clásico juego de mesa dominicano. Apila fichas y bloquea a tu oponente.</p>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🁣</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Dominó</h3>
+                    <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Hasta 4 Jugadores.</p>
                 </div>
 
                 {/* TicTacToe Card */}
@@ -133,7 +133,7 @@ export default function Lobby({ user, setUser, socket }) {
                     onClick={() => setSelectedGame(selectedGame === 'tictactoe' ? null : 'tictactoe')}
                     className="glass-panel" 
                     style={{ 
-                        padding: '2rem', 
+                        padding: '1.5rem 1rem', 
                         cursor: 'pointer',
                         textAlign: 'center',
                         border: selectedGame === 'tictactoe' ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
@@ -141,10 +141,11 @@ export default function Lobby({ user, setUser, socket }) {
                         transition: 'all 0.2s ease',
                         background: selectedGame === 'tictactoe' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)'
                     }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⭕❌</div>
-                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.4rem' }}>Tres en Raya</h3>
-                    <p style={{ color: '#aaa', margin: 0 }}>Rápido y táctico. Sé el primero en hacer línea con 3 símbolos.</p>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⭕❌</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Tres en Raya</h3>
+                    <p style={{ color: '#aaa', margin: 0, fontSize: '0.9rem' }}>Rápido y táctico.</p>
                 </div>
+            </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
