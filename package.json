@@ -1,0 +1,11 @@
+{
+  "name": "arcade-platform",
+  "version": "1.0.0",
+  "description": "Multiplayer Dominoes and TicTacToe Backend",
+  "scripts": {
+    "start": "cd backend && npm install && node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
