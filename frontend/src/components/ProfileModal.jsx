@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { User, X, Gamepad2, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, X, Gamepad2, Settings, Volume2, VolumeX } from 'lucide-react';
 
 export default function ProfileModal({ userProfile, currentUser, onClose, onSave, onChallenge }) {
     const [editMode, setEditMode] = useState(false);
     const [color, setColor] = useState(userProfile?.profileConfig?.color || '#6366f1');
     const [bgUrl, setBgUrl] = useState(userProfile?.profileConfig?.bgUrl || '');
     const [musicUrl, setMusicUrl] = useState(userProfile?.profileConfig?.musicUrl || '');
+    const [volume, setVolume] = useState(0.2);
+    const audioRef = useRef(null);
 
     const isMe = currentUser.id === userProfile.id;
+
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [volume]);
 
     const handleSave = () => {
         onSave({ color, bgUrl, musicUrl });
@@ -55,6 +63,20 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
                             <Settings size={14} /> Editar Perfil
                         </button>
                     )}
+                    
+                    {/* Custom Volume Controls (Top Right beside Close button) */}
+                    {userProfile?.profileConfig?.musicUrl && !editMode && !ytId && (
+                        <div style={{ position: 'absolute', top: '10px', right: '50px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.5)', padding: '6px 12px', borderRadius: '20px' }}>
+                            <Volume2 size={16} color="#fff" />
+                            <input 
+                                type="range" 
+                                min="0" max="1" step="0.01" 
+                                value={volume} 
+                                onChange={e => setVolume(parseFloat(e.target.value))} 
+                                style={{ width: '60px', height: '4px', cursor: 'pointer' }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Avatar Overlapping Banner */}
@@ -80,13 +102,13 @@ export default function ProfileModal({ userProfile, currentUser, onClose, onSave
                                 </div>
                             </div>
 
-                            {/* Music Player */}
+                            {/* Music Player Hidden Core */}
                             {userProfile?.profileConfig?.musicUrl && !editMode && (
-                                <div style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+                                <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
                                     {ytId ? (
-                                        <iframe width="100%" height="80" src={`https://www.youtube.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ borderRadius: '4px' }}></iframe>
+                                        <iframe width="10" height="10" src={`https://www.youtube.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}&controls=0`} title="YouTube hidden video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
                                     ) : (
-                                        <audio autoPlay loop controls src={userProfile.profileConfig.musicUrl} style={{ width: '100%', height: '40px' }} />
+                                        <audio ref={audioRef} autoPlay loop src={userProfile.profileConfig.musicUrl} />
                                     )}
                                 </div>
                             )}

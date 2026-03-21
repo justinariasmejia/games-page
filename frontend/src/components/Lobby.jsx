@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Trophy, Users, User, Gamepad2 } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 
-export default function Lobby({ user, socket }) {
+export default function Lobby({ user, setUser, socket }) {
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
     const [incomingChallenge, setIncomingChallenge] = useState(null);
@@ -49,8 +49,9 @@ export default function Lobby({ user, socket }) {
 
     const handleSaveProfile = (config) => {
         socket.emit('update_profile', config);
-        // Optimistically update my local object so the UI reflects it immediately
-        user.profileConfig = config; 
+        // Update global React state to reflect UI changes instantly without refresh
+        setUser(prevUser => ({ ...prevUser, profileConfig: config }));
+        setViewingProfile(prev => ({ ...prev, profileConfig: config }));
     };
 
     return (

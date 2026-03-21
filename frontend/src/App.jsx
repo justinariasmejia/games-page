@@ -93,7 +93,7 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Lobby user={user} socket={socket} />} />
+      <Route path="/" element={<div className="app-container"><Lobby user={user} setUser={setUser} socket={socket} /></div>} />
       <Route path="/play/dominoes/:roomId" element={<DominoesGame user={user} socket={socket} />} />
       <Route path="/play/tictactoe/:roomId" element={<TicTacToeGame user={user} socket={socket} />} />
     </Routes>
