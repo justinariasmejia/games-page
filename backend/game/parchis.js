@@ -30,7 +30,7 @@ class ParchisGame {
         const canMove = this.tokens[playerId].some(t => {
             if (t.status === 'goal') return false;
             if (t.status === 'home' && this.diceRoll === 5) return true;
-            if (t.status === 'active' && t.pos + this.diceRoll <= 72) return true; // 68 + 4 goal path
+            if (t.status === 'active' && t.pos + this.diceRoll <= 75) return true; // 68 + 7 goal path
             return false;
         });
 
@@ -60,10 +60,10 @@ class ParchisGame {
         // Standard move
         if (token.status === 'active') {
             const nextPos = token.pos + this.diceRoll;
-            if (nextPos > 72) return false; // Must reach goal exactly
+            if (nextPos > 75) return false; // Must reach goal exactly
             
             token.pos = nextPos;
-            if (token.pos === 72) token.status = 'goal';
+            if (token.pos === 75) token.status = 'goal';
             
             // Capture logic MVP
             if (token.status === 'active' && token.pos < 68) {
