@@ -184,10 +184,22 @@ class UnoGame {
         // Remove Uno safety if they drew a card
         this.unoCallStatus[playerId] = false;
         
-        this.drawCards(playerId, 1);
+        let validFound = false;
+        let limit = 50; // Prevent infinite loop in edge case where deck empty and no valid moves exist
         
-        // In some rules, you can play the drawn card immediately. Here, we just end the turn for simplicity.
-        this.switchTurn();
+        while (!validFound && limit > 0) {
+            const initialLen = this.players[playerId].length;
+            this.drawCards(playerId, 1);
+            if (this.players[playerId].length === initialLen) break; // Cannot draw more cards
+            
+            const newCard = this.players[playerId][this.players[playerId].length - 1];
+            if (this.isValidMove(newCard)) {
+                validFound = true;
+            }
+            limit--;
+        }
+        
+        // Se queda en el turno de este jugador para que juegue obligatoriamente la carta válida que sacó.
         return true;
     }
 

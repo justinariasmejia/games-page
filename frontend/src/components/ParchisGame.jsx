@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, User } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
+import Dice3D from './Dice3D';
 
 const TRACK = [
     [7, 10], [6, 10], [5, 10], [4, 10], [3, 10], [2, 10], [1, 10], [0, 10], // 0-7
@@ -37,6 +38,11 @@ export default function ParchisGame({ user, socket }) {
     const navigate = useNavigate();
     const [gameState, setGameState] = useState(null);
     const [gameOverMsg, setGameOverMsg] = useState('');
+    const [visualTokens, setVisualTokens] = useState(null);
+    const [isRolling, setIsRolling] = useState(false);
+
+    const animationQueue = useRef([]);
+    const isAnimating = useRef(false);
 
     useEffect(() => {
         if (!user) return;
@@ -52,14 +58,124 @@ export default function ParchisGame({ user, socket }) {
         return () => socket.off('game_state');
     }, [roomId, socket, user]);
 
-    if (!gameState) return <div className="container" style={{ textAlign: 'center', padding: '4rem' }}>Dibujando Tablero Clásico...</div>;
+    // Handle Token Animations
+    useEffect(() => {
+        if (!gameState) return;
+
+        if (!visualTokens) {
+            setVisualTokens(JSON.parse(JSON.stringify(gameState.tokens)));
+            return;
+        }
+
+        let changesFound = false;
+        const newQueue = [];
+
+        Object.keys(gameState.tokens).forEach(pid => {
+            gameState.tokens[pid].forEach((serverToken) => {
+                const visualToken = visualTokens[pid].find(t => t.id === serverToken.id);
+                if (!visualToken) return;
+
+                if (visualToken.status !== serverToken.status || visualToken.pos !== serverToken.pos) {
+                    newQueue.push({
+                        pid,
+                        tokenId: serverToken.id,
+                        targetStatus: serverToken.status,
+                        targetPos: serverToken.pos,
+                        color: serverToken.color
+                    });
+                    changesFound = true;
+                }
+            });
+        });
+
+        if (changesFound) {
+            animationQueue.current.push(...newQueue);
+            processQueue();
+        } else if (!isAnimating.current && animationQueue.current.length === 0) {
+            // Self-heal sync
+            setVisualTokens(JSON.parse(JSON.stringify(gameState.tokens)));
+        }
+    }, [gameState]);
+
+    const processQueue = () => {
+        if (isAnimating.current || animationQueue.current.length === 0) return;
+        isAnimating.current = true;
+
+        const animateNext = () => {
+            if (animationQueue.current.length === 0) {
+                isAnimating.current = false;
+                return;
+            }
+
+            const task = animationQueue.current[0];
+            let reached = false;
+
+            setVisualTokens(prev => {
+                const nextTokens = JSON.parse(JSON.stringify(prev));
+                const t = nextTokens[task.pid].find(x => x.id === task.tokenId);
+
+                if (!t) {
+                    reached = true;
+                    return prev;
+                }
+
+                if (t.status === 'home' && task.targetStatus === 'active') {
+                    t.status = 'active';
+                    t.pos = 0;
+                } else if (t.status === 'active' && task.targetStatus === 'home') {
+                    t.status = 'home';
+                    t.pos = -1;
+                    reached = true;
+                } else if (t.status === 'active' && t.pos < task.targetPos) {
+                    t.pos += 1;
+                } else if (t.status === 'active' && task.targetPos >= 75 && t.pos === 75) {
+                    t.status = 'goal';
+                    reached = true;
+                } else if (t.status === 'goal') {
+                    reached = true;
+                } else {
+                    t.status = task.targetStatus;
+                    t.pos = task.targetPos;
+                    reached = true;
+                }
+
+                if (reached || (t.status === task.targetStatus && t.pos === task.targetPos)) {
+                    animationQueue.current.shift();
+                }
+
+                return nextTokens;
+            });
+
+            setTimeout(animateNext, reached ? 10 : 150); // Hop each 150ms
+        };
+
+        animateNext();
+    };
+
+    const handleRollClick = () => {
+        if (!gameState) return;
+        const isMyTurn = gameState.turn === user.id;
+        const noPendingMoves = !gameState.diceRoll || gameState.diceRoll.length === 0;
+
+        if (isMyTurn && noPendingMoves && !gameState.awaitingReward && !isRolling) {
+            setIsRolling(true);
+            socket.emit('roll_parchis_dice', roomId);
+            
+            // Stop animation visually after rolling wait time
+            setTimeout(() => {
+                setIsRolling(false);
+            }, 800);
+        }
+    };
+
+    if (!gameState || !visualTokens) return <div className="container" style={{ textAlign: 'center', padding: '4rem', color: '#fff' }}>Conectando tablero de Parchís...</div>;
 
     const isMyTurn = gameState.turn === user.id;
+    const hasMovesPending = gameState.diceRoll && gameState.diceRoll.length > 0;
 
     // Build the grid background squares
     const renderBackgroundCells = () => {
         const cells = [];
-        // Loop standard track
         TRACK.forEach((coord, i) => {
             const isSafe = SAFE_ZONES.includes(i);
             const isYellowStart = i === START_OFFSETS.yellow;
@@ -80,12 +196,11 @@ export default function ParchisGame({ user, socket }) {
                     width: CELL_SIZE, height: CELL_SIZE, boxSizing: 'border-box', border: '1px solid #999', backgroundColor: bg,
                     display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
-                    {isSafe && <span style={{ color: '#aaa', fontSize: '10px' }}>★</span>}
+                    {isSafe && <span style={{ color: '#aaa', fontSize: '14px', zIndex: 1 }}>★</span>}
                 </div>
             );
         });
 
-        // Loop Goal paths
         Object.entries(GOAL_TRACKS).forEach(([color, path]) => {
             let bg = '';
             if (color === 'yellow') bg = '#eab308';
@@ -97,13 +212,12 @@ export default function ParchisGame({ user, socket }) {
                 cells.push(
                     <div key={`goal-${color}-${i}`} style={{
                         position: 'absolute', left: coord[0] * CELL_SIZE, top: coord[1] * CELL_SIZE,
-                        width: CELL_SIZE, height: CELL_SIZE, boxSizing: 'border-box', border: '1px solid #rgba(0,0,0,0.1)', backgroundColor: bg
+                        width: CELL_SIZE, height: CELL_SIZE, boxSizing: 'border-box', border: '1px solid rgba(0,0,0,0.1)', backgroundColor: bg
                     }}></div>
                 );
             });
         });
 
-        // Center Triangle / Goal area (occupies center 3x3)
         cells.push(
             <div key="center-goal" style={{
                 position: 'absolute', left: 8 * CELL_SIZE, top: 8 * CELL_SIZE,
@@ -112,8 +226,7 @@ export default function ParchisGame({ user, socket }) {
             }}></div>
         );
 
-        // Render bases (large squares corners)
-        const block = 8 * CELL_SIZE; // width of base
+        const block = 8 * CELL_SIZE;
         cells.push(<div key="base-green" style={{ position: 'absolute', left: 0, top: 0, width: block, height: block, border: '4px solid #22c55e', backgroundColor: '#dcfce7', borderRadius: '16px' }}></div>);
         cells.push(<div key="base-red" style={{ position: 'absolute', left: 11 * CELL_SIZE, top: 0, width: block, height: block, border: '4px solid #ef4444', backgroundColor: '#fee2e2', borderRadius: '16px' }}></div>);
         cells.push(<div key="base-yellow" style={{ position: 'absolute', left: 0, top: 11 * CELL_SIZE, width: block, height: block, border: '4px solid #eab308', backgroundColor: '#fef9c3', borderRadius: '16px' }}></div>);
@@ -124,6 +237,24 @@ export default function ParchisGame({ user, socket }) {
 
     const getColorHex = (c) => ({ yellow: '#eab308', blue: '#3b82f6', red: '#ef4444', green: '#22c55e' })[c];
 
+    // Calculamos si varias fichas caen en el mismo recuadro exacto para no solaparse totalmente
+    const getPosKey = (t) => {
+        if (t.status === 'home') return `home-${t.color}-${t.id}`;
+        if (t.status === 'goal') return `goal-${t.color}`;
+        if (t.pos >= 68) return `path-${t.color}-${t.pos}`;
+        const globalPos = (t.pos + START_OFFSETS[t.color]) % 68;
+        return `global-${globalPos}`;
+    };
+
+    const countByPos = {};
+    Object.keys(visualTokens).forEach(pid => {
+        visualTokens[pid].forEach(t => {
+            const pk = getPosKey(t);
+            if (!countByPos[pk]) countByPos[pk] = [];
+            countByPos[pk].push({ pid, t });
+        });
+    });
+
     return (
         <div className="container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', background: '#1e1e1e' }}>
             
@@ -131,12 +262,34 @@ export default function ParchisGame({ user, socket }) {
                 <button className="glass-button-secondary" onClick={() => navigate('/')} style={{ padding: '0.5rem', display: 'flex', alignItems: 'center' }}>
                     <ChevronLeft size={20} /> Salir
                 </button>
-                <div style={{ fontWeight: 'bold', color: isMyTurn ? '#4ade80' : '#f87171', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {isMyTurn ? "¡Lanza los dados!" : `Esperando...`}
-                    <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', cursor: (isMyTurn && gameState.diceRoll === null) ? 'pointer' : 'default', border: (isMyTurn && gameState.diceRoll === null) ? '2px solid #eab308' : 'none' }}
-                         onClick={() => { if (isMyTurn && gameState.diceRoll === null) socket.emit('roll_parchis_dice', roomId); }}>
-                        Dado: <strong style={{color: '#fff', fontSize: '1.4rem'}}>{gameState.diceRoll || '🎲'}</strong>
-                    </div>
+                <div style={{ fontWeight: 'bold', color: isMyTurn ? '#4ade80' : '#f87171', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                    
+                    {gameState.awaitingReward ? (
+                        <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', border: '2px solid #eab308' }}>
+                            ¡Premio! Mueve <strong style={{color: '#fff'}}>{Array.isArray(gameState.diceRoll) ? gameState.diceRoll.join(' + ') : gameState.diceRoll}</strong> espacios
+                        </div>
+                    ) : (
+                        <>
+                            <span>{isMyTurn ? "¡Tu Turno!" : "Esperando..."}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                                <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Dados:</span>
+                                {(!gameState.originalRoll || gameState.originalRoll.length === 0) ? (
+                                    <Dice3D value={1} isRolling={isRolling} onClick={handleRollClick} />
+                                ) : (
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <Dice3D value={gameState.originalRoll[0]} isRolling={isRolling} onClick={handleRollClick} />
+                                        <Dice3D value={gameState.originalRoll[1]} isRolling={isRolling} onClick={handleRollClick} />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {(hasMovesPending && !gameState.awaitingReward) && (
+                                <div style={{color: '#fff', fontSize: '0.9rem', background: 'rgba(255,255,255,0.1)', padding: '5px 10px', borderRadius: '4px'}}>
+                                    A mover: <strong>{gameState.diceRoll.join(' - ')}</strong>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -145,29 +298,39 @@ export default function ParchisGame({ user, socket }) {
                     
                     {renderBackgroundCells()}
 
-                    {/* Render Tokens */}
-                    {Object.keys(gameState.tokens).map(pid => {
-                        const isMe = pid === user.id;
-                        return gameState.tokens[pid].map(t => {
+                    {Object.keys(countByPos).map(pk => {
+                        const items = countByPos[pk];
+                        return items.map((item, index) => {
+                            const { pid, t } = item;
+                            const isMe = pid === user.id;
                             let cx = 0, cy = 0;
+
                             if (t.status === 'home') {
-                                // Draw them inside their base visually spaced out
                                 const coords = BASE_COORDS[t.color][t.id - 1];
                                 cx = coords[0] * CELL_SIZE + CELL_SIZE/2;
                                 cy = coords[1] * CELL_SIZE + CELL_SIZE/2;
                             } else if (t.status === 'active' && t.pos < 68) {
-                                // On the universal track
                                 const globalPos = (t.pos + START_OFFSETS[t.color]) % 68;
                                 cx = TRACK[globalPos][0] * CELL_SIZE + CELL_SIZE/2;
                                 cy = TRACK[globalPos][1] * CELL_SIZE + CELL_SIZE/2;
                             } else if (t.status === 'active' && t.pos >= 68 && t.pos <= 74) {
-                                // Goal path
                                 cx = GOAL_TRACKS[t.color][t.pos - 68][0] * CELL_SIZE + CELL_SIZE/2;
                                 cy = GOAL_TRACKS[t.color][t.pos - 68][1] * CELL_SIZE + CELL_SIZE/2;
                             } else if (t.status === 'goal') {
-                                // Placed in the center goal area
-                                cx = 9.5 * CELL_SIZE + (Math.random()*15 - 7);
-                                cy = 9.5 * CELL_SIZE + (Math.random()*15 - 7);
+                                cx = 9.5 * CELL_SIZE;
+                                cy = 9.5 * CELL_SIZE;
+                            }
+
+                            if (items.length > 1 && t.status !== 'home' && t.status !== 'goal') {
+                                const offsetMap = [{ x: -5, y: -5 }, { x: 5, y: 5 }, { x: -5, y: 5 }, { x: 5, y: -5 }];
+                                cx += offsetMap[Math.min(index, 3)].x;
+                                cy += offsetMap[Math.min(index, 3)].y;
+                            }
+                            if (t.status === 'goal') {
+                                const gOffsetMap = [{x:-15, y:-15}, {x:0, y:-15}, {x:15, y:-15}, {x:-15, y:0}, {x:15,y:0}, {x:-15, y:15},{x:0, y:15}, {x:15,y:15}];
+                                const offset = gOffsetMap[Math.min(t.id + (t.color==='yellow'?0:t.color==='blue'?2:t.color==='red'?4:6), 7)];
+                                cx += offset.x;
+                                cy += offset.y;
                             }
 
                             return (
@@ -180,15 +343,15 @@ export default function ParchisGame({ user, socket }) {
                                         borderRadius: '50%',
                                         backgroundColor: getColorHex(t.color),
                                         border: '3px solid #fff',
-                                        boxShadow: (isMe && gameState.diceRoll) ? `0 0 10px #fff` : '0 2px 5px rgba(0,0,0,0.5)',
-                                        transform: (isMe && gameState.diceRoll) ? 'scale(1.2)' : 'none',
-                                        transition: 'all 0.3s ease',
-                                        cursor: isMe ? 'pointer' : 'default',
-                                        zIndex: 10 + t.id
+                                        boxShadow: (isMe && hasMovesPending) ? `0 0 10px #fff` : '0 2px 5px rgba(0,0,0,0.7)',
+                                        transform: (isMe && hasMovesPending) ? 'scale(1.15)' : 'scale(1)',
+                                        transition: 'all 0.15s linear', 
+                                        cursor: (isMe && hasMovesPending) ? 'pointer' : 'default',
+                                        zIndex: 10 + index
                                     }}
-                                    onClick={() => { if (isMe) socket.emit('move_parchis_token', { roomId, tokenId: t.id }); }}
+                                    onClick={() => { if (isMe && hasMovesPending) socket.emit('move_parchis_token', { roomId, tokenId: t.id }); }}
                                 >
-                                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid rgba(0,0,0,0.2)' }}/>
+                                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `2px solid rgba(0,0,0,0.3)` }}/>
                                 </div>
                             );
                         });
