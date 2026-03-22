@@ -274,7 +274,10 @@ export default function ParchisGame({ user, socket }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
                                 <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Dados:</span>
                                 {(!gameState.originalRoll || gameState.originalRoll.length === 0) ? (
-                                    <Dice3D value={1} isRolling={isRolling} onClick={handleRollClick} />
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <Dice3D value={1} isRolling={isRolling} onClick={handleRollClick} />
+                                        <Dice3D value={1} isRolling={isRolling} onClick={handleRollClick} />
+                                    </div>
                                 ) : (
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <Dice3D value={gameState.originalRoll[0]} isRolling={isRolling} onClick={handleRollClick} />
